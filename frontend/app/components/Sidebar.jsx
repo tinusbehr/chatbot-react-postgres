@@ -32,14 +32,26 @@ function SidebarHeader() {
  * Demonstrates props usage: receives href and title from parent component.
  * This pattern allows the same component structure with different data.
  */
-function ChatThreadItem({href, title}) {
+function ChatThreadItem({thread}) {
+  const { id, href, title } = thread;
+  const handleDeleteClick = (event) => {
+    event.stopPropagation();
+
+    console.log('Delete button clicked for thread', {
+      id: id,
+      title: title,
+      href: href,
+      element: event.target,
+      timestamp: new Date().toISOString()
+    });
+  };
   return (
     <li className="chat-thread-item">
       <div className="chat-thread-item-content">
         <a href={href} className="chat-thread-link">
           {title}
         </a>
-        <button className="delete-thread-button" type="button" aria-label="delete thread">&times;</button>
+        <button onClick={handleDeleteClick} className="delete-thread-button" type="button" aria-label="delete thread">&times;</button>
       </div>
     </li>
   );
@@ -64,6 +76,7 @@ function ChatThreadsList({threads}) {
             key={thread.id}
             href={thread.href}
             title={thread.title}
+            thread={thread}
           />
         ))}
       </ul>
