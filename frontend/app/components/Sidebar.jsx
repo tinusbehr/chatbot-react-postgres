@@ -39,7 +39,7 @@ function ChatThreadItem({href, title}) {
         <a href={href} className="chat-thread-link">
           {title}
         </a>
-        <button className="delete-thread-button">x</button>
+        <button className="delete-thread-button" type="button" aria-label="delete thread">&times;</button>
       </div>
     </li>
   );
