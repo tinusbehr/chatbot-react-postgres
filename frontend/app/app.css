@@ -259,3 +259,64 @@ body {
   background: var(--bg-button-disabled);
   cursor: not-allowed;
 }
+
+.chat-thread-item-content {
+  display: flex;
+  align-items: center;
+  border-radius: 6px;
+  transition: background 0.1s ease;
+  position: relative;
+}
+.chat-thread-item-content:hover {
+  background: var(--bg-hover);
+}
+
+.chat-thread-link {
+  display: block;
+  flex: 1;
+  background: transparent;
+  border: none;
+  border-radius: 6px;
+  padding: 0.75rem;
+  text-align: left;
+  font-size: 0.875rem;
+  color: var(--text-primary);
+  text-decoration: none;
+  cursor: pointer;
+  transition: background 0.1s ease;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.delete-thread-button {
+  background: transparent;
+  border: none;
+  color: var(--text-primary);
+  font-size: 1.2rem;
+  width: 24px;
+  height: 24px;
+  border-radius: 4px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-right: 0.5rem;
+  opacity: 0;
+  transition: opacity 0.2s ease, background 0.1s ease;
+}
+
+.chat-thread-item-content:hover .delete-thread-button {
+  opacity: 1;
+}
+
+.delete-thread-button:hover {
+  background: rgba(239, 68, 68, 0.1);
+  color: #ef4444;
+}
+
+.delete-thread-button:focus {
+  outline: 2px solid var(--border-focus);
+  outline-offset: 1px;
+  opacity: 1;
+}
