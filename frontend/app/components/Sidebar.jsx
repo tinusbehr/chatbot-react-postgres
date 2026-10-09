@@ -1,5 +1,3 @@
-import React from "react";
-
 /**
  * Sidebar Components
  *
@@ -8,7 +6,6 @@ import React from "react";
  * 2. Import/export patterns for sharing components
  * 3. Component composition and hierarchy
  * 4. File organization for better project structure
- * 5. CONTROLLED COMPONENTS: Components that manage form input state
  */
 
 /**
@@ -31,41 +28,30 @@ function SidebarHeader() {
 /**
  * ChatThreadItem Component
  *
- * Now uses CALLBACK FUNCTIONS for state updates! Key concepts:
- * 1. DESTRUCTURING: Extract thread data and callback function
- * 2. CALLBACK INVOCATION: Call parent function to trigger state updates
- * 3. EVENT HANDLING: Still handle click events but now trigger real actions
- * 4. STATE LIFTING: Component doesn't manage state, just triggers updates
- * 5. UNIDIRECTIONAL DATA FLOW: Data flows down, events flow up
+ * A reusable component for individual chat thread links.
+ * Demonstrates props usage: receives href and title from parent component.
+ * This pattern allows the same component structure with different data.
  */
-function ChatThreadItem({ thread, onDeleteThread }) {
+function ChatThreadItem({thread}) {
   const { id, href, title } = thread;
-
   const handleDeleteClick = (event) => {
-    // Prevent the click from bubbling up to parent elements
     event.stopPropagation();
 
-    // Call the callback function passed from parent to delete the thread
-    if (onDeleteThread) {
-      onDeleteThread(id);
-    }
+    console.log('Delete button clicked for thread', {
+      id: id,
+      title: title,
+      href: href,
+      element: event.target,
+      timestamp: new Date().toISOString()
+    });
   };
-
   return (
     <li className="chat-thread-item">
       <div className="chat-thread-item-content">
         <a href={href} className="chat-thread-link">
           {title}
         </a>
-        <button
-          className="delete-thread-btn"
-          aria-label={`Delete thread: ${title}`}
-          title="Delete this conversation"
-          type="button"
-          onClick={handleDeleteClick}
-        >
-          &times;
-        </button>
+        <button onClick={handleDeleteClick} className="delete-thread-button" type="button" aria-label="delete thread">&times;</button>
       </div>
     </li>
   );
@@ -74,49 +60,23 @@ function ChatThreadItem({ thread, onDeleteThread }) {
 /**
  * ChatThreadsList Component
  *
- * Now demonstrates CONTROLLED COMPONENTS and COMPUTED STATE! Key concepts:
- * 1. CONTROLLED COMPONENTS: Input value managed by React state
- * 2. COMPUTED STATE: Filtering data without additional useState
- * 3. ARRAY METHODS: Using filter() to transform data
- * 4. LOCAL STATE: Managing search input with useState
- * 5. CASE-INSENSITIVE SEARCH: Using toLowerCase() for better UX
- * 6. REAL-TIME FILTERING: Updates as user types
+ * Now receives data via PROP DRILLING! This demonstrates:
+ * 1. PROP DRILLING: Data flows Layout -> Sidebar -> ChatThreadsList
+ * 2. COMPONENT REUSABILITY: Can work with any threads array passed as props
+ * 3. DATA FLOW: Shows how data moves through multiple component layers
+ * 4. CONSISTENT PATTERNS: Uses same props.data.map() pattern as ChatMessages
  */
-function ChatThreadsList({ threads = [], onDeleteThread }) {
-  // LOCAL STATE: Managing search input value (controlled component)
-  const [searchValue, setSearchValue] = React.useState("");
-
-  // EVENT HANDLER: Update search value as user types
-  const handleSearchChange = (event) => {
-    setSearchValue(event.target.value);
-  };
-
-  // COMPUTED STATE: Filter threads based on search value
-  // This is NOT stored in state - it's computed on every render
-  const filteredThreads = threads.filter((thread) =>
-    thread.title.toLowerCase().includes(searchValue.toLowerCase()),
-  );
-
+function ChatThreadsList({threads}) {
   return (
     <nav className="chat-threads-list" aria-label="Chat threads">
-      {/* Search input - CONTROLLED COMPONENT */}
-      <div className="search-container">
-        <input
-          type="text"
-          className="search-input"
-          placeholder="Search conversations..."
-          value={searchValue}
-          onChange={handleSearchChange}
-        />
-      </div>
-
       <ul>
-        {/* Render filtered threads instead of all threads */}
-        {filteredThreads.map((thread) => (
+        {/* Using props.threads - data passed down through prop drilling! */}
+        {threads.map((thread) => (
           <ChatThreadItem
             key={thread.id}
+            href={thread.href}
+            title={thread.title}
             thread={thread}
-            onDeleteThread={onDeleteThread}
           />
         ))}
       </ul>
@@ -150,19 +110,18 @@ function SidebarFooter() {
 /**
  * Main Sidebar Component
  *
- * Now handles CALLBACK PROP DRILLING! Key concepts:
- * 1. DESTRUCTURING: Extract both data and callback functions
- * 2. CALLBACK DRILLING: Pass functions down through component hierarchy
- * 3. INTERMEDIATE COMPONENT: Forwards callbacks without using them directly
- * 4. SEPARATION OF CONCERNS: Sidebar doesn't handle delete logic
- * 5. PROP FORWARDING: Clean pattern for passing props to children
+ * Now demonstrates PROP DRILLING - receiving props and passing them down:
+ * 1. PROPS ACCEPTANCE: Receives 'threads' prop from Layout parent
+ * 2. PROP DRILLING: Passes threads down to ChatThreadsList child
+ * 3. INTERMEDIATE COMPONENT: Acts as bridge between Layout and ChatThreadsList
+ * 4. COMPONENT COMPOSITION: Combines multiple components while managing data flow
  */
-export default function Sidebar({ threads, onDeleteThread }) {
+export default function Sidebar({threads}) {
   return (
     <aside className="sidebar">
-      {/* Component composition with both data and callback drilling */}
+      {/* Component composition with prop drilling */}
       <SidebarHeader />
-      <ChatThreadsList threads={threads} onDeleteThread={onDeleteThread} />
+      <ChatThreadsList threads={threads} />
       <SidebarFooter />
     </aside>
   );
