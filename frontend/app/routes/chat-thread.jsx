@@ -31,6 +31,16 @@ const defaultMessages = [
  * 1. useParams() HOOK: Extracts URL parameters from the route
  * 2. The `messages` state is currently shared among all threads, this will be fixed later.
  */
+
+export async function clientLoader({params}) {
+  const { threadId } = params;
+  await new Promise((resolve) => setTimeout(resolve, 500));
+
+  return (
+    
+  )
+}
+
 export default function ChatThread() {
   // Extract the threadId from the URL using useParams()
   const { threadId } = useParams();
