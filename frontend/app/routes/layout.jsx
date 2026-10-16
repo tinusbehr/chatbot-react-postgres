@@ -1,6 +1,8 @@
 import { Outlet, useLoaderData } from "react-router";
 import Sidebar from "../components/Sidebar.jsx";
 
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
+const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY
 /**
  * CLIENT LOADER FUNCTION
  *
@@ -17,55 +19,19 @@ import Sidebar from "../components/Sidebar.jsx";
  * - When React Router revalidates (after mutations)
  */
 export async function clientLoader() {
-  // Simulate network delay (like calling an API)
-  await new Promise((resolve) => setTimeout(resolve, 300));
+  const url = `${supabaseUrl}/rest/v1/threads` + "?select=*&order=created_at.desc";
+  const response = await fetch(url, {
+    headers: {
+      apikey: supabaseKey,
+      Authorization: `Bearer ${supabaseKey}`,
+    },
+  });
+  if (!response.ok) throw new Error("Kunne ikke hente tråde");
+  const threads = await response.json();
 
-  // Mock thread data - later this will come from Supabase
-  const mockThreads = [
-    {
-      id: "1",
-      title: "How to learn programming?",
-    },
-    {
-      id: "2",
-      title: "What are the best pizza toppings?",
-    },
-    {
-      id: "3",
-      title: "Can you explain quantum physics?",
-    },
-    {
-      id: "4",
-      title: "Help me create a morning routine",
-    },
-    {
-      id: "5",
-      title: "What should I do this weekend?",
-    },
-    {
-      id: "6",
-      title: "Why is the sky blue?",
-    },
-    {
-      id: "7",
-      title: "How do I learn a new language?",
-    },
-    {
-      id: "8",
-      title: "What's the meaning of life?",
-    },
-    {
-      id: "9",
-      title: "Tell me a funny joke",
-    },
-    {
-      id: "10",
-      title: "What's a healthy dinner idea?",
-    },
-  ];
+  return { threads };
+};
 
-  return { threads: mockThreads };
-}
 
 /**
  * Layout Component
