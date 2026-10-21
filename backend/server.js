@@ -43,26 +43,52 @@ app.get("/", (req, res) => {
  * - Status codes: 200 for success, 500 for server errors
  * - JSON response: Return data in a format the frontend can use
  */
-app.get("/api/threads", async (req, res) => {
+app.get("/api/threads/:id", async (req, res) => {
   try {
     // Execute SQL query using the sql`` tagged template
+    const threadId = req.params.id;
     const threads = await sql`
       SELECT id, title, created_at 
       FROM threads 
-      ORDER BY created_at DESC
+      WHERE id = ${threadId}
     `;
 
-    // Return the threads as JSON
-    // Express automatically sets Content-Type: application/json
-    res.json(threads);
-  } catch (error) {
-    // Log the error for debugging (you should see this in the terminal)
-    console.error("Error fetching threads:", error);
+    if (threads.length === 0) {
+      return res.status(404).json({
+        error: "Thread not found",
+      });
+    };
 
-    // Return a generic error message to the client
-    // Don't expose internal error details for security
+    res.json(threads[0]);
+  } catch (error) {
+    console.error("Error fetching thread:", error);
     res.status(500).json({
-      error: "Failed to fetch threads from database",
+      error: "Failed to fetch thread from database",
+    });
+  }
+});
+
+app.get("/api/threads/:id/messages", async (req, res) => {
+  try {
+    const threadId = req.params.id;
+
+    // Fetch all messages for this thread
+    // Filter by thread_id foreign key and sort chronologically
+    const messages = await sql`
+      SELECT id, thread_id, type, content, created_at 
+      FROM messages 
+      WHERE thread_id = ${threadId}
+      ORDER BY created_at ASC
+    `;
+
+    // Return messages array (empty array if no messages yet)
+    // Unlike single thread endpoint, we don't 404 for empty results
+    // An empty thread is valid - it just has no messages yet
+    res.json(messages);
+  } catch (error) {
+    console.error("Error fetching messages:", error);
+    res.status(500).json({
+      error: "Failed to fetch messages from database",
     });
   }
 });
