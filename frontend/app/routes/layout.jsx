@@ -54,8 +54,7 @@ export async function clientLoader() {
  * - Checks the "intent" field to determine the action
  */
 export async function clientAction({ request }) {
-  const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-  const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+  const apiUrl = import.meta.env.VITE_API_URL
 
   // Extract form data
   const formData = await request.formData();
@@ -67,16 +66,9 @@ export async function clientAction({ request }) {
     try {
       // DELETE request to Supabase
       // Messages are automatically deleted due to CASCADE
-      const response = await fetch(
-        `${supabaseUrl}/rest/v1/threads?id=eq.${threadId}`,
-        {
-          method: "DELETE",
-          headers: {
-            apikey: supabaseKey,
-            Authorization: `Bearer ${supabaseKey}`,
-          },
-        },
-      );
+      const response = await fetch(`${apiUrl}/api/threads/${threadId}`, {
+        method: "DELETE",
+      });
 
       if (!response.ok) {
         return { error: `Failed to delete thread: ${response.status}` };
@@ -91,18 +83,6 @@ export async function clientAction({ request }) {
   return null;
 }
 
-/**
- * Layout Component
- *
- * Now uses DATA LOADING and MUTATIONS!
- *
- * Key concepts:
- * 1. useLoaderData() HOOK: Accesses data from clientLoader
- * 2. NO STATE MANAGEMENT: Data comes from loader, not useState
- * 3. LAYOUT PATTERN: Wraps child routes with consistent UI (sidebar)
- * 4. OUTLET: Renders the matched child route component
- * 5. NO DELETE CALLBACK: Sidebar handles deletion with useFetcher
- */
 export default function Layout() {
   // Access threads data from the loader
   const { threads } = useLoaderData();
