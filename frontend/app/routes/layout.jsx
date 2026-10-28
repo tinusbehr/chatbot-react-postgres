@@ -45,8 +45,8 @@ export async function clientLoader() {
  * Handles thread deletion requests.
  * Key concepts:
  * 1. INTENT PATTERN: Uses form field to identify the action type
- * 2. DELETE REQUEST: Sends DELETE request to Supabase
- * 3. CASCADE DELETE: Supabase automatically deletes related messages
+ * 2. DELETE REQUEST: Sends DELETE request to our custom API
+ * 3. CASCADE DELETE: Database automatically deletes related messages
  * 4. AUTOMATIC REVALIDATION: Loader re-runs to refresh thread list
  *
  * The action runs:
@@ -54,7 +54,8 @@ export async function clientLoader() {
  * - Checks the "intent" field to determine the action
  */
 export async function clientAction({ request }) {
-  const apiUrl = import.meta.env.VITE_API_URL
+  // Get our API URL from environment variables
+  const apiUrl = import.meta.env.VITE_API_URL;
 
   // Extract form data
   const formData = await request.formData();
@@ -64,7 +65,7 @@ export async function clientAction({ request }) {
   // Handle delete intent
   if (intent === "delete" && threadId) {
     try {
-      // DELETE request to Supabase
+      // DELETE request to our custom API
       // Messages are automatically deleted due to CASCADE
       const response = await fetch(`${apiUrl}/api/threads/${threadId}`, {
         method: "DELETE",
@@ -83,6 +84,18 @@ export async function clientAction({ request }) {
   return null;
 }
 
+/**
+ * Layout Component
+ *
+ * Now uses DATA LOADING and MUTATIONS!
+ *
+ * Key concepts:
+ * 1. useLoaderData() HOOK: Accesses data from clientLoader
+ * 2. NO STATE MANAGEMENT: Data comes from loader, not useState
+ * 3. LAYOUT PATTERN: Wraps child routes with consistent UI (sidebar)
+ * 4. OUTLET: Renders the matched child route component
+ * 5. NO DELETE CALLBACK: Sidebar handles deletion with useFetcher
+ */
 export default function Layout() {
   // Access threads data from the loader
   const { threads } = useLoaderData();
