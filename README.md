@@ -1,5 +1,7 @@
 # A "chatbot" built with React and PostgreSQL
 
+<img width="2880" height="1578" alt="chatbot-ui-screenshot" src="https://github.com/user-attachments/assets/40f4435a-0fe2-4813-9f20-9597a2cdfc93" />
+
 This repository serves as a reference implementation and tutorial for a classroom project where students build a chatbot UI with full CRUD functionality, progressing from basic React components to a complete full-stack application, first by integrating a Supabase REST API, then refactoring to a custom Express API that integrates with a PostgreSQL database.
 
 Each step of the project is documented in a separate pull request, which includes a detailed tutorial explaining the concepts and code changes involved. This allows students to follow along, understand the evolution of the application, and learn best practices in React development, state management, routing, data fetching, and backend integration.
@@ -77,6 +79,20 @@ Implement your first destructive operation with a DELETE endpoint. Handle DELETE
 Complete your CRUD migration from Supabase by implementing thread creation. Build a compound operation that creates both a thread and its initial message in a single API request. Learn about sequential database operations and designing APIs that match your application's business logic. 🎉 Your frontend is now completely independent of Supabase's REST API!
 
 **Skills**: Compound operations, sequential database operations, API design, business logic, complete CRUD implementation
+
+### Step 13: Updating Thread Titles - [PR #13 tutorial](https://github.com/bewildergeist/chatbot-react-postgres/pull/13)
+
+Complete the full CRUD implementation by adding Update functionality. Implement a PATCH endpoint for partial resource updates, then build a clean editing interface using React Router's nested routes. Learn how `Outlet` and `useRouteLoaderData` enable parent-child route relationships, and discover how URL-based state can replace complex state management patterns. This simpler approach demonstrates that routing itself can elegantly handle UI modes like viewing versus editing.
+
+**Skills**: HTTP PATCH method, SQL UPDATE statements, nested routes, Outlet component, useRouteLoaderData hook, URL-based state, uncontrolled forms, API documentation
+
+### Step 14: User Accounts & Login UI - [PR #14 tutorial](https://github.com/bewildergeist/chatbot-react-postgres/pull/14)
+
+Add user authentication to your chatbot. Create registration and login forms where users can create accounts with email and password. Learn how password hashing works with bcrypt, what JWT tokens are and how they're structured, and how Supabase Auth manages user sessions. This PR focuses on building the authentication UI — users can register and log in, but the backend won't enforce authentication yet. This lets you explore how tokens are created and stored before learning to use them in the next steps.
+
+**Skills**: Supabase Auth API, user registration, login forms, password hashing with bcrypt, JWT tokens, localStorage, form validation, clientAction functions, authentication concepts
+
+https://github.com/user-attachments/assets/fe215e1f-d61b-4555-98f2-c5f41dd2db1b
 
 ## Prerequisites
 
