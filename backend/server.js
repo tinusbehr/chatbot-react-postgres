@@ -109,16 +109,26 @@ app.get("/api/threads/:id", requireAuth, async (req, res) => {
  * - Chronological ordering: Natural order for chat messages
  */
 app.get("/api/threads/:id/messages", requireAuth, async (req, res) => {
-  const user_id = req.user_id
+  const user_id = req.user_id;
   try {
     const threadId = req.params.id;
+
+    const access = await sql`
+    SELECT id
+    FROM threads
+    WHERE id = ${threadId} AND user_id = ${user_id}
+    `
+
+    if (!access) {
+      throw new Error("401 error: Adgang nægtet")
+    };
 
     // Fetch all messages for this thread
     // Filter by thread_id foreign key and sort chronologically
     const messages = await sql`
       SELECT id, thread_id, type, content, created_at 
       FROM messages 
-      WHERE thread_id = ${threadId} AND user_id = ${user_id}
+      WHERE thread_id = ${threadId}
       ORDER BY created_at ASC
     `;
 
@@ -156,7 +166,8 @@ app.get("/api/threads/:id/messages", requireAuth, async (req, res) => {
  * - Parameterized queries prevent SQL injection
  * - Return helpful error messages without exposing internals
  */
-app.post("/api/threads/:id/messages", async (req, res) => {
+app.post("/api/threads/:id/messages", requireAuth, async (req, res) => {
+  const user_id = req.user_id
   try {
     const threadId = req.params.id;
     const { type, content } = req.body;
