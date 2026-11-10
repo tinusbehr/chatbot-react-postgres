@@ -60,7 +60,8 @@ app.get("/api/threads", requireAuth, async (req, res) => {
 });
 
 
-app.get("/api/threads/:id", async (req, res) => {
+app.get("/api/threads/:id", requireAuth, async (req, res) => {
+  const user_id = req.user_id
   try {
     // Extract the thread ID from the URL
     // For /api/threads/123, req.params.id will be "123"
@@ -107,7 +108,8 @@ app.get("/api/threads/:id", async (req, res) => {
  * - RESTful routing: /resource/:id/sub-resource pattern
  * - Chronological ordering: Natural order for chat messages
  */
-app.get("/api/threads/:id/messages", async (req, res) => {
+app.get("/api/threads/:id/messages", requireAuth, async (req, res) => {
+  const user_id = req.user_id
   try {
     const threadId = req.params.id;
 
@@ -224,6 +226,7 @@ app.post("/api/threads/:id/messages", async (req, res) => {
  * require two HTTP requests and expose an inconsistent state.
  */
 app.post("/api/threads", requireAuth, async (req, res) => {
+  const user_id = req.user_id
   try {
     const { title, content } = req.body;
 
@@ -305,7 +308,8 @@ app.post("/api/threads", requireAuth, async (req, res) => {
  * We use PATCH because we're only updating the title field. If we were
  * replacing the entire thread resource, we would use PUT instead.
  */
-app.patch("/api/threads/:id", async (req, res) => {
+app.patch("/api/threads/:id", requireAuth, async (req, res) => {
+  const user_id = req.user_id
   try {
     // Extract the thread ID from the URL parameters
     const threadId = req.params.id;
@@ -333,7 +337,7 @@ app.patch("/api/threads/:id", async (req, res) => {
     const result = await sql`
       UPDATE threads
       SET title = ${trimmedTitle}
-      WHERE id = ${threadId}
+      WHERE id = ${threadId} AND user_id = ${user_id}
       RETURNING id, title, created_at
     `;
 
@@ -356,7 +360,8 @@ app.patch("/api/threads/:id", async (req, res) => {
 
 // ========== DELETE an existing thread ========== //
 // DELETE /api/threads/:id - Delete a thread by ID
-app.delete("/api/threads/:id", async (req, res) => {
+app.delete("/api/threads/:id", requireAuth, async (req, res) => {
+  const user_id = req.user_id
   try {
     // Extract the thread ID from the URL parameters
     const threadId = req.params.id;
