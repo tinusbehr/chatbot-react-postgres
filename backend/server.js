@@ -2,6 +2,7 @@
 import express from "express";
 import cors from "cors";
 import sql from "./db.js";
+import { requireAuth } from "./auth.js";
 
 // ========== Setup Express App ========== //
 const app = express();
@@ -49,11 +50,12 @@ app.get("/", (req, res) => {
  * - Status codes: 200 for success, 500 for server errors
  * - JSON response: Return data in a format the frontend can use
  */
-app.get("/api/threads", async (req, res) => {
+app.get("/api/threads", requireAuth, async (req, res) => {
+  const user_id = req.user_id
   try {
     // Execute SQL query using the sql`` tagged template
     const threads = await sql`
-      SELECT id, title, created_at 
+      SELECT id, title, created_at, ${user_id} 
       FROM threads 
       ORDER BY created_at DESC
     `;
