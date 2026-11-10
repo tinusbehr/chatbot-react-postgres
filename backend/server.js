@@ -33,23 +33,7 @@ app.get("/", (req, res) => {
   });
 });
 
-/**
- * GET /api/threads
- *
- * Fetches all chat threads from the database, ordered by creation date (newest first).
- *
- * SQL Concepts:
- * - SELECT: Retrieve data from the database
- * - Specific columns: Only fetch the columns we need (id, title, created_at)
- * - ORDER BY: Sort the results
- * - DESC: Descending order (newest first)
- *
- * API Concepts:
- * - async/await: Handle asynchronous database queries
- * - try/catch: Handle errors gracefully
- * - Status codes: 200 for success, 500 for server errors
- * - JSON response: Return data in a format the frontend can use
- */
+
 app.get("/api/threads", requireAuth, async (req, res) => {
   const user_id = req.user_id
   try {
@@ -75,25 +59,7 @@ app.get("/api/threads", requireAuth, async (req, res) => {
   }
 });
 
-/**
- * GET /api/threads/:id
- *
- * Fetches a single thread by its ID.
- *
- * SQL Concepts:
- * - WHERE clause: Filter results to match a specific condition
- * - Parameterized queries: Safely include user input in SQL queries
- * - Primary key lookup: Fast retrieval using the id column
- *
- * API Concepts:
- * - Route parameters: Dynamic URL segments (the :id part)
- * - 404 Not Found: Return when requested resource doesn't exist
- * - req.params: Access route parameters from the URL
- *
- * Security:
- * - Tagged template (sql``) prevents SQL injection
- * - Even with user input, the query is safe from malicious SQL
- */
+
 app.get("/api/threads/:id", async (req, res) => {
   try {
     // Extract the thread ID from the URL
@@ -105,7 +71,7 @@ app.get("/api/threads/:id", async (req, res) => {
     const threads = await sql`
       SELECT id, title, created_at 
       FROM threads 
-      WHERE id = ${threadId}
+      WHERE id = ${threadId} AND user_id = ${user_id}
     `;
 
     // Check if thread was found
@@ -150,7 +116,7 @@ app.get("/api/threads/:id/messages", async (req, res) => {
     const messages = await sql`
       SELECT id, thread_id, type, content, created_at 
       FROM messages 
-      WHERE thread_id = ${threadId}
+      WHERE thread_id = ${threadId} AND user_id = ${user_id}
       ORDER BY created_at ASC
     `;
 
@@ -257,7 +223,7 @@ app.post("/api/threads/:id/messages", async (req, res) => {
  * a message). An alternative would be separate endpoints, but that would
  * require two HTTP requests and expose an inconsistent state.
  */
-app.post("/api/threads", async (req, res) => {
+app.post("/api/threads", requireAuth, async (req, res) => {
   try {
     const { title, content } = req.body;
 
@@ -400,7 +366,7 @@ app.delete("/api/threads/:id", async (req, res) => {
     // because of the ON DELETE CASCADE constraint on the messages table
     const result = await sql`
       DELETE FROM threads
-      WHERE id = ${threadId}
+      WHERE id = ${threadId} AND user_id = ${user_id}
       RETURNING id
     `;
 
