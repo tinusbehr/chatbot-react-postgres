@@ -33,13 +33,33 @@ app.get("/", (req, res) => {
   });
 });
 
-
+/**
+ * GET /api/threads
+ *
+ * Fetches all chat threads from the database, ordered by creation date (newest first).
+ *
+ * Authentication:
+ * - Protected by requireAuth middleware
+ * - Requires valid JWT token in Authorization header
+ * - req.userId is available (will be used in PR #17 for filtering)
+ *
+ * SQL Concepts:
+ * - SELECT: Retrieve data from the database
+ * - Specific columns: Only fetch the columns we need (id, title, created_at)
+ * - ORDER BY: Sort the results
+ * - DESC: Descending order (newest first)
+ *
+ * API Concepts:
+ * - async/await: Handle asynchronous database queries
+ * - try/catch: Handle errors gracefully
+ * - Status codes: 200 for success, 500 for server errors
+ * - JSON response: Return data in a format the frontend can use
+ */
 app.get("/api/threads", requireAuth, async (req, res) => {
-  const user_id = req.user_id
   try {
     // Execute SQL query using the sql`` tagged template
     const threads = await sql`
-      SELECT id, title, created_at, ${user_id} 
+      SELECT id, title, created_at 
       FROM threads 
       ORDER BY created_at DESC
     `;
@@ -59,9 +79,31 @@ app.get("/api/threads", requireAuth, async (req, res) => {
   }
 });
 
-
+/**
+ * GET /api/threads/:id
+ *
+ * Fetches a single thread by its ID.
+ *
+ * Authentication:
+ * - Protected by requireAuth middleware
+ * - Requires valid JWT token in Authorization header
+ * - req.userId is available (will be used in PR #17 for authorization)
+ *
+ * SQL Concepts:
+ * - WHERE clause: Filter results to match a specific condition
+ * - Parameterized queries: Safely include user input in SQL queries
+ * - Primary key lookup: Fast retrieval using the id column
+ *
+ * API Concepts:
+ * - Route parameters: Dynamic URL segments (the :id part)
+ * - 404 Not Found: Return when requested resource doesn't exist
+ * - req.params: Access route parameters from the URL
+ *
+ * Security:
+ * - Tagged template (sql``) prevents SQL injection
+ * - Even with user input, the query is safe from malicious SQL
+ */
 app.get("/api/threads/:id", requireAuth, async (req, res) => {
-  const user_id = req.user_id
   try {
     // Extract the thread ID from the URL
     // For /api/threads/123, req.params.id will be "123"
@@ -72,7 +114,7 @@ app.get("/api/threads/:id", requireAuth, async (req, res) => {
     const threads = await sql`
       SELECT id, title, created_at 
       FROM threads 
-      WHERE id = ${threadId} AND user_id = ${user_id}
+      WHERE id = ${threadId}
     `;
 
     // Check if thread was found
@@ -98,6 +140,11 @@ app.get("/api/threads/:id", requireAuth, async (req, res) => {
  *
  * Fetches all messages for a specific thread, ordered chronologically.
  *
+ * Authentication:
+ * - Protected by requireAuth middleware
+ * - Requires valid JWT token in Authorization header
+ * - req.userId is available (will be used in PR #17 for authorization)
+ *
  * SQL Concepts:
  * - WHERE with foreign key: Filter messages by their thread_id
  * - ORDER BY ASC: Sort in ascending order (oldest first)
@@ -109,19 +156,8 @@ app.get("/api/threads/:id", requireAuth, async (req, res) => {
  * - Chronological ordering: Natural order for chat messages
  */
 app.get("/api/threads/:id/messages", requireAuth, async (req, res) => {
-  const user_id = req.user_id;
   try {
     const threadId = req.params.id;
-
-    const access = await sql`
-    SELECT id
-    FROM threads
-    WHERE id = ${threadId} AND user_id = ${user_id}
-    `
-
-    if (!access) {
-      throw new Error("401 error: Adgang nægtet")
-    };
 
     // Fetch all messages for this thread
     // Filter by thread_id foreign key and sort chronologically
@@ -149,6 +185,11 @@ app.get("/api/threads/:id/messages", requireAuth, async (req, res) => {
  *
  * Creates a new message in a thread.
  *
+ * Authentication:
+ * - Protected by requireAuth middleware
+ * - Requires valid JWT token in Authorization header
+ * - req.userId is available (will be used in PR #17 for authorization)
+ *
  * SQL Concepts:
  * - INSERT INTO: Add new rows to a table
  * - VALUES: Specify the data to insert
@@ -167,7 +208,6 @@ app.get("/api/threads/:id/messages", requireAuth, async (req, res) => {
  * - Return helpful error messages without exposing internals
  */
 app.post("/api/threads/:id/messages", requireAuth, async (req, res) => {
-  const user_id = req.user_id
   try {
     const threadId = req.params.id;
     const { type, content } = req.body;
@@ -218,6 +258,11 @@ app.post("/api/threads/:id/messages", requireAuth, async (req, res) => {
  * Creates a new thread with an initial message.
  * This is a compound operation that performs two inserts in sequence.
  *
+ * Authentication:
+ * - Protected by requireAuth middleware
+ * - Requires valid JWT token in Authorization header
+ * - req.userId is available (will be used in PR #17 to set thread owner)
+ *
  * SQL Concepts:
  * - SEQUENTIAL INSERTS: Thread must be created first to get its ID
  * - RETURNING clause: Get the created thread's ID for the message insert
@@ -237,7 +282,6 @@ app.post("/api/threads/:id/messages", requireAuth, async (req, res) => {
  * require two HTTP requests and expose an inconsistent state.
  */
 app.post("/api/threads", requireAuth, async (req, res) => {
-  const user_id = req.user_id
   try {
     const { title, content } = req.body;
 
@@ -302,6 +346,11 @@ app.post("/api/threads", requireAuth, async (req, res) => {
  * Updates a thread's title.
  * This is a partial update - only the title field is modified.
  *
+ * Authentication:
+ * - Protected by requireAuth middleware
+ * - Requires valid JWT token in Authorization header
+ * - req.userId is available (will be used in PR #17 for authorization)
+ *
  * SQL Concepts:
  * - UPDATE statement: Modifies existing rows in a table
  * - WHERE clause: Specifies which row(s) to update
@@ -320,7 +369,6 @@ app.post("/api/threads", requireAuth, async (req, res) => {
  * replacing the entire thread resource, we would use PUT instead.
  */
 app.patch("/api/threads/:id", requireAuth, async (req, res) => {
-  const user_id = req.user_id
   try {
     // Extract the thread ID from the URL parameters
     const threadId = req.params.id;
@@ -348,7 +396,7 @@ app.patch("/api/threads/:id", requireAuth, async (req, res) => {
     const result = await sql`
       UPDATE threads
       SET title = ${trimmedTitle}
-      WHERE id = ${threadId} AND user_id = ${user_id}
+      WHERE id = ${threadId}
       RETURNING id, title, created_at
     `;
 
@@ -369,10 +417,17 @@ app.patch("/api/threads/:id", requireAuth, async (req, res) => {
   }
 });
 
-// ========== DELETE an existing thread ========== //
-// DELETE /api/threads/:id - Delete a thread by ID
+/**
+ * DELETE /api/threads/:id
+ *
+ * Delete a thread by ID.
+ *
+ * Authentication:
+ * - Protected by requireAuth middleware
+ * - Requires valid JWT token in Authorization header
+ * - req.userId is available (will be used in PR #17 for authorization)
+ */
 app.delete("/api/threads/:id", requireAuth, async (req, res) => {
-  const user_id = req.user_id
   try {
     // Extract the thread ID from the URL parameters
     const threadId = req.params.id;
@@ -382,7 +437,7 @@ app.delete("/api/threads/:id", requireAuth, async (req, res) => {
     // because of the ON DELETE CASCADE constraint on the messages table
     const result = await sql`
       DELETE FROM threads
-      WHERE id = ${threadId} AND user_id = ${user_id}
+      WHERE id = ${threadId}
       RETURNING id
     `;
 
