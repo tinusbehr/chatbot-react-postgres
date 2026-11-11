@@ -207,3 +207,6 @@ export default function ChatThread() {
     </main>
   );
 }
+
+
+  
