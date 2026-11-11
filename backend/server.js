@@ -33,6 +33,68 @@ app.get("/", (req, res) => {
   });
 });
 
+app.post("/api/test-mistral", async (req, res) => {
+  try {
+    // Get the Mistral API key from environment variables
+    const apiKey = process.env.MISTRAL_API_KEY;
+
+    // Validate that the API key is configured
+    if (!apiKey) {
+      return res.status(500).json({
+        error:
+          "Mistral API key not configured. Please set MISTRAL_API_KEY in your .env file",
+      });
+    }
+
+    // Call the Mistral API using fetch
+    // Note: fetch() works the same way in Node.js as it does in the browser!
+    const mistralResponse = await fetch(
+      "https://api.mistral.ai/v1/chat/completions",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${apiKey}`,
+        },
+        body: JSON.stringify({
+          model: "mistral-small-latest",
+          messages: [
+            {
+              role: "user",
+              content: "Hello! Please respond with a short greeting.",
+            },
+          ],
+        }),
+      }
+    );
+
+    // Check if the request was successful
+    if (!mistralResponse.ok) {
+      const errorData = await mistralResponse.json();
+      console.error("Mistral API error:", errorData);
+      return res.status(mistralResponse.status).json({
+        error: "Failed to get response from Mistral API",
+        details: errorData,
+      });
+    }
+
+    // Parse the response
+    const data = await mistralResponse.json();
+
+    // Return the full response for testing
+    res.json({
+      message: "Successfully connected to Mistral API!",
+      response: data,
+    });
+  } catch (error) {
+    console.error("Error testing Mistral API:", error);
+    res.status(500).json({
+      error: "Failed to test Mistral API",
+      details: error.message,
+    });
+  }
+});
+
 /**
  * GET /api/threads
  *
@@ -263,6 +325,7 @@ app.get("/api/threads/:id/messages", requireAuth, async (req, res) => {
  * - Return helpful error messages without exposing internals
  */
 app.post("/api/threads/:id/messages", requireAuth, async (req, res) => {
+ const user_id = req.userId
   try {
     const threadId = req.params.id;
     const { type, content } = req.body;
@@ -294,7 +357,7 @@ app.post("/api/threads/:id/messages", requireAuth, async (req, res) => {
     const threads = await sql`
       SELECT id 
       FROM threads 
-      WHERE id = ${threadId} AND user_id = ${req.userId}
+      WHERE id = ${threadId} AND user_id = ${user_id}
     `;
 
     // If thread doesn't exist or user doesn't own it, return 404
@@ -307,21 +370,108 @@ app.post("/api/threads/:id/messages", requireAuth, async (req, res) => {
     // Insert the new message
     // We've verified the user owns the thread, so it's safe to insert
     // RETURNING * gives us back the inserted row (including generated id and created_at)
-    const messages = await sql`
+    // const messages = await sql`
+    //   INSERT INTO messages (thread_id, type, content)
+    //   VALUES (${threadId}, ${type}, ${trimmedContent})
+    //   RETURNING id, thread_id, type, content, created_at
+    // `;
+
+    // Return the created message with 201 Created status
+    //res.status(201).json(messages[0]);
+
+    const userMessages = await sql`
       INSERT INTO messages (thread_id, type, content)
       VALUES (${threadId}, ${type}, ${trimmedContent})
       RETURNING id, thread_id, type, content, created_at
     `;
 
-    // Return the created message with 201 Created status
-    res.status(201).json(messages[0]);
+    const userMessage = userMessages[0];
+
+    const allMessages = await sql`
+      SELECT id, thread_id, type, content, created_at 
+      FROM messages 
+      WHERE thread_id = ${threadId}
+      ORDER BY created_at ASC
+    `;
+
+    // STEP 3: Format messages for Mistral API
+    // Mistral expects: [{ role: "user" | "assistant", content: "..." }]
+    // Our database uses: { type: "user" | "bot", content: "..." }
+    // We need to translate 'bot' → 'assistant' for the API
+    const groqMessages = allMessages.map((msg) => ({
+      role: msg.type === "bot" ? "assistant" : "user",
+      content: msg.content,
+    }));
+
+    // STEP 4: Call Mistral API to generate a response
+    const apiKey = process.env.GROQ_API_KEY;
+
+    if (!apiKey) {
+      console.error("Groq API key not configured");
+      return res.status(201).json(userMessage);
+    }
+
+    const groqResponse = await fetch(
+      "https://api.groq.com/openai/v1/chat/completions",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${apiKey}`,
+        },
+        body: JSON.stringify({
+          "model": "openai/gpt-oss-20b",
+          "messages": groqMessages,
+          "temperature": 0,
+          "max_completion_tokens": 2048,
+          "top_p": 1,
+          "stream": false,
+          "reasoning_effort": "medium",
+          "stop": null
+
+        }),
+      }
+    );
+
+    // Check if the Mistral API request was successful
+    if (!groqResponse.ok) {
+      const errorData = await groqResponse.json();
+      console.error("Groq API error:", errorData);
+      // Return the user message even if AI generation fails
+      return res.status(502).json(userMessage);
+    }
+
+    // Parse the AI response
+    const aiData = await groqResponse.json();
+    const aiContent = aiData.choices[0].message.content;
+
+    // STEP 5: Save the AI's response to the database
+    // Note: We use type 'bot' in our database (not 'assistant')
+    const botMessages = await sql`
+      INSERT INTO messages (thread_id, type, content)
+      VALUES (${threadId}, 'bot', ${aiContent})
+      RETURNING id, thread_id, type, content, created_at
+    `;
+
+    const botMessage = botMessages[0];
+
+    // STEP 6: Return both the user's message and the AI's response
+    // This allows the frontend to display both immediately without another request
+    res.status(201).json({
+      userMessage: userMessage,
+      botMessage: botMessage,
+    });
+
   } catch (error) {
     console.error("Error creating message:", error);
     res.status(500).json({
       error: "Failed to create message",
     });
   }
+
 });
+
+
 
 /**
  * POST /api/threads
